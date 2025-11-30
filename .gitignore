@@ -130,6 +130,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Local environment variables file (may contain secrets)
+.env
+
 # Spyder project settings
 .spyderproject
 .spyproject

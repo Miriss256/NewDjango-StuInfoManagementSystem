@@ -12,19 +12,33 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 import os
 from pathlib import Path
+import os
+from pathlib import Path
+import sys
+from pathlib import Path as _Path
+try:
+    # load .env if present (non-fatal)
+    from dotenv import load_dotenv
+    _dotenv_path = _Path(__file__).resolve().parent.parent.parent.joinpath('.env')
+    if _dotenv_path.exists():
+        load_dotenv(dotenv_path=str(_dotenv_path))
+except Exception:
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-i0a0oe$m&*(=@h^)dqu+*ketv!m5i8j5ikjsb%1=&3e#(bu7ae"
+# SECURITY: read sensitive settings from environment variables where possible
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-i0a0oe$m&*(=@h^)dqu+*ketv!m5i8j5ikjsb%1=&3e#(bu7ae",
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG should be False in production; set via env var
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = []
 
@@ -45,6 +59,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise middleware serves static files efficiently in production
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -86,16 +102,25 @@ WSGI_APPLICATION = "StuInfoManagementSystem.wsgi.application"
 # }
 
 
-DATABASES = {
-	'default': {
-		'ENGINE': 'django.db.backends.mysql',  # 默认
-		'NAME': 'studentinfo',  # 连接的数据库
-		'HOST': '127.0.0.1',  # mysql的ip地址
-		'PORT': 3306,  # mysql的端口
-		'USER': 'root',  # mysql的用户名
-		'PASSWORD': '123456'  # mysql的密码
-	}
-}
+if 'test' in sys.argv or os.environ.get('DJANGO_USE_SQLITE_FOR_TESTS'):
+    # Use SQLite in-memory for test runs to avoid MySQL client dependencies.
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',  # 默认
+            'NAME': os.environ.get('DB_NAME', 'studentinfo'),
+            'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+            'PORT': int(os.environ.get('DB_PORT', 3306)),
+            'USER': os.environ.get('DB_USER', 'root'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', '123456'),
+        }
+    }
 
 
 # Password validation
@@ -134,6 +159,15 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Directory where `collectstatic` will collect static files for production
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+# Use WhiteNoise storage backend to serve compressed files and maintain a
+# manifest for cache-busting.
+STATICFILES_STORAGE = (
+    "whitenoise.storage.CompressedManifestStaticFilesStorage"
+)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
@@ -143,4 +177,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "/media/"
+
+# ALLOWED_HOSTS can be provided via environment variable comma-separated
+_raw_allowed = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost')
+ALLOWED_HOSTS = [h.strip() for h in _raw_allowed.split(',') if h.strip()]
 

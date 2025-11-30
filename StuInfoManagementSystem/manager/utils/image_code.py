@@ -26,7 +26,16 @@ def check_code(width=90, height=30, char_length=4):
         """
         return (random.randint(0, 255), random.randint(10, 255), random.randint(64, 255))
  
-    font = ImageFont.truetype('/data/www/Monaco.ttf', size=28)
+    # 优先尝试加载项目或系统中的常用字体；若无法加载则回退到Pillow内置的默认字体
+    try:
+        font = ImageFont.truetype('/data/www/Monaco.ttf', size=28)
+    except Exception:
+        try:
+            # Windows 常见字体备选
+            font = ImageFont.truetype('arial.ttf', size=28)
+        except Exception:
+            # 最后回退到Pillow自带的默认字体（保证在任意环境下都不会抛出异常）
+            font = ImageFont.load_default()
     # 写文字
     for i in range(char_length):
         char = rndChar()

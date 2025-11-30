@@ -1,11 +1,14 @@
+import logging
 from . import models
 from io import BytesIO
 from .utils.encrypt import md5
 from .utils.image_code import check_code
 from django import forms
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.exceptions import ValidationError
-from django.shortcuts import HttpResponse, render, redirect
+from django.shortcuts import render, redirect
+
+logger = logging.getLogger(__name__)
 
 
 def manager_index(request):
@@ -127,7 +130,7 @@ def teacher_edit(request, uid):
 def teacher_delete(request):
     """删除教师"""
     uid = request.GET.get("uid")
-    print(uid)
+    logger.debug("deleting teacher uid=%s", uid)
     if not models.teacher.objects.filter(uid=uid).exists():
         return JsonResponse({"status": False, "error": "删除失败，数据不存在"})
 
@@ -192,7 +195,7 @@ def login(request):
             form.add_error("image_code", "验证码错误！")
             return render(request, "manager/login.html", {"form": form})
 
-        print(form.cleaned_data)
+        logger.debug("login form cleaned_data=%s", form.cleaned_data)
         if form.cleaned_data["usertype"] == "1":
             admin_object = models.manager.objects.filter(**form.cleaned_data).first()
         elif form.cleaned_data["usertype"] == "2":
@@ -362,7 +365,7 @@ def student_edit(request, uid):
 def student_delete(request):
     """删除学生"""
     uid = request.GET.get("uid")
-    print(uid)
+    logger.debug("deleting student uid=%s", uid)
     if not models.student.objects.filter(studentid=uid).exists():
         return JsonResponse({"status": False, "error": "删除失败，数据不存在"})
 
